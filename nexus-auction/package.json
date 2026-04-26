@@ -1,6 +1,7 @@
 {
   "name": "nexus-auction",
   "version": "1.0.0",
+  "description": "Live real-time auction and bidding website for Nexus PES Legends",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
@@ -11,5 +12,10 @@
     "express": "^4.19.2",
     "mongoose": "^8.3.2",
     "socket.io": "^4.7.5"
-  }
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "author": "Nexus PES Legends",
+  "license": "ISC"
 }
