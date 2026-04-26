@@ -2,57 +2,43 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=1024">
-    <script src="/socket.io/socket.io.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nexus PES Legends - Auction</title>
     <style>
-        :root {
-            --primary: #00ff88;
-            --bg-dark: #0f172a;
-            --bg-panel: #1e293b;
-            --text-light: #f8fafc;
-            --danger: #ef4444;
-            --warning: #f59e0b;
-        }
+        :root { --primary: #00ff88; --bg-dark: #0f172a; --bg-panel: #1e293b; --text-light: #f8fafc; --danger: #ef4444; --warning: #f59e0b; }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         body { background-color: var(--bg-dark); color: var(--text-light); }
         header { background: #020617; padding: 20px; border-bottom: 2px solid var(--primary); display: flex; justify-content: space-between; align-items: center; }
         .logo { font-size: 24px; font-weight: bold; color: var(--primary); }
         
         .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
-        .text-center { text-align: center; }
-        .mt-2 { margin-top: 20px; }
-        
-        /* Panels */
         .panel { background: var(--bg-panel); padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
         .panel h2 { margin-bottom: 15px; color: var(--primary); border-bottom: 1px solid #334155; padding-bottom: 10px; }
         
-        /* Buttons & Inputs */
         button { background: var(--primary); color: #000; border: none; padding: 10px 15px; border-radius: 4px; font-weight: bold; cursor: pointer; transition: 0.2s; }
         button:hover { opacity: 0.8; }
         button.danger { background: var(--danger); color: white; }
         input, select { width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 4px; border: 1px solid #334155; background: #0f172a; color: white; }
         
-        /* Tables */
         table { width: 100%; border-collapse: collapse; margin-top: 15px; }
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid #334155; }
         th { background: #020617; color: var(--primary); }
         .status-available { color: var(--primary); }
         .status-sold { color: var(--danger); }
         
-        /* Live Auction Area */
         .live-auction { text-align: center; padding: 30px; background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%); border: 2px solid var(--primary); border-radius: 10px;}
         .player-focus { font-size: 32px; font-weight: bold; margin: 10px 0; color: #fff; }
         .current-bid { font-size: 48px; color: var(--primary); font-weight: bold; margin: 15px 0; }
         .highest-bidder { font-size: 20px; color: var(--warning); margin-bottom: 20px; }
-        .bid-controls button { font-size: 18px; margin: 0 5px; }
-
-        /* Login Modal */
+        
         #loginModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); align-items: center; justify-content: center; z-index: 1000; }
         .modal-content { background: var(--bg-panel); padding: 30px; border-radius: 8px; width: 350px; }
         
         .hidden { display: none !important; }
         .flex { display: flex; gap: 10px; }
+        
+        /* Layout Grid */
+        .grid-2 { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
     </style>
 </head>
 <body>
@@ -67,52 +53,60 @@
     </header>
 
     <div class="container">
-        <h1 class="text-center mt-2" style="margin-bottom: 30px; font-size: 36px;">🏆 Nexus Auction Carnival 2026</h1>
+        <h1 style="text-align: center; margin: 20px 0; font-size: 36px;">🏆 Nexus Auction Carnival 2026</h1>
 
-        <!-- LIVE AUCTION DASHBOARD -->
-        <div class="panel live-auction">
-            <h2>🔴 LIVE AUCTION</h2>
-            <div id="noAuctionActive">
-                <p style="font-size: 20px; color: #94a3b8; margin-top: 20px;">Waiting for Admin to start an auction...</p>
-            </div>
-            
-            <div id="activeAuction" class="hidden">
-                <div style="font-size: 18px; color: #94a3b8;">Currently on the block:</div>
-                <div class="player-focus" id="livePlayerName">-</div>
-                <div>Strength: <span id="livePlayerStrength"></span> | Card: <span id="livePlayerCard"></span></div>
+        <div class="grid-2">
+            <!-- LIVE AUCTION DASHBOARD -->
+            <div class="panel live-auction">
+                <h2>🔴 LIVE AUCTION</h2>
+                <div id="noAuctionActive"><p style="font-size: 20px; color: #94a3b8; margin-top: 20px;">Waiting for Admin...</p></div>
                 
-                <div class="current-bid">Current Bid: <span id="liveBidAmount">0</span></div>
-                <div class="highest-bidder">Highest Bidder: <span id="liveBidderName">None</span></div>
+                <div id="activeAuction" class="hidden">
+                    <div class="player-focus" id="livePlayerName">-</div>
+                    <div>Strength: <span id="livePlayerStrength"></span> | Card: <span id="livePlayerCard"></span></div>
+                    
+                    <div class="current-bid">Bid: <span id="liveBidAmount">0</span></div>
+                    <div class="highest-bidder">Highest Bidder: <span id="liveBidderName">None</span></div>
 
-                <!-- Captain Bidding Controls -->
-                <div id="captainControls" class="bid-controls hidden mt-2">
-                    <button onclick="placeBid(5)">Bid +5M</button>
-                    <button onclick="placeBid(10)">Bid +10M</button>
-                    <button onclick="placeBid(20)">Bid +20M</button>
-                </div>
+                    <!-- Captain Bidding Controls -->
+                    <div id="captainControls" class="hidden" style="margin-top: 15px;">
+                        <button onclick="placeBid(1)">Bid +1 Lakh</button>
+                        <button onclick="placeBid(5)">Bid +5 Lakhs</button>
+                        <button onclick="placeBid(10)">Bid +10 Lakhs</button>
+                    </div>
 
-                <!-- Admin Live Controls -->
-                <div id="adminLiveControls" class="bid-controls hidden mt-2">
-                    <button class="danger" onclick="sellPlayer()">🔨 Sell to Highest Bidder</button>
-                    <button style="background: #64748b;" onclick="cancelAuction()">Cancel Auction</button>
+                    <!-- Admin Live Controls -->
+                    <div id="adminLiveControls" class="hidden" style="margin-top: 15px;">
+                        <button class="danger" onclick="sellPlayer()">🔨 Sell to Highest Bidder</button>
+                        <button style="background: #64748b;" onclick="cancelAuction()">Cancel Auction</button>
+                    </div>
                 </div>
+            </div>
+
+            <!-- TEAM BUDGETS DASHBOARD -->
+            <div class="panel">
+                <h2>💰 Team Budgets</h2>
+                <table>
+                    <thead><tr><th>Team</th><th>Remaining Budget</th></tr></thead>
+                    <tbody id="teamTableBody"></tbody>
+                </table>
             </div>
         </div>
 
-        <!-- ADMIN DASHBOARD (Hidden by default) -->
+        <!-- ADMIN DASHBOARD -->
         <div id="adminDashboard" class="panel hidden">
-            <h2>⚙️ Admin Control Panel - Add New Player</h2>
+            <h2>⚙️ Add New Player</h2>
             <div class="flex">
                 <input type="text" id="newPName" placeholder="Player Name" required>
                 <input type="number" id="newPStrength" placeholder="Team Strength" required>
-                <select id="newPCard">
+                <select id="newPCard" onchange="autoFillBaseValue()">
                     <option value="Standard">Standard</option>
-                    <option value="Epic">Epic</option>
-                    <option value="Big Time">Big Time</option>
-                    <option value="Show Time">Show Time</option>
                     <option value="POTW">POTW</option>
+                    <option value="Show Time">Show Time</option>
+                    <option value="Big Time">Big Time</option>
+                    <option value="Epic">Epic</option>
                 </select>
-                <input type="number" id="newPValue" placeholder="Base Value (M)" required>
+                <input type="number" id="newPValue" value="10" placeholder="Base Value (Lakhs)" required>
                 <button onclick="addPlayer()">Add Player</button>
             </div>
         </div>
@@ -123,292 +117,187 @@
             <table>
                 <thead>
                     <tr>
-                        <th>Name</th>
-                        <th>Team Strength</th>
-                        <th>Card Type</th>
-                        <th>Base Value</th>
-                        <th>Status</th>
-                        <th>Sold To</th>
-                        <th class="admin-only hidden">Admin Action</th>
+                        <th>Name</th><th>Strength</th><th>Card Type</th><th>Base Value</th><th>Status</th><th>Sold To</th><th class="admin-only hidden">Admin Action</th>
                     </tr>
                 </thead>
-                <input type="button" onclick="clearData()" value="Clear All Data (Hard Reset)" style="background: var(--danger); width: auto; font-size: 12px; margin-bottom: 10px;"/>
-                <tbody id="playerTableBody">
-                    <!-- Populated by JS -->
-                </tbody>
+                <tbody id="playerTableBody"></tbody>
             </table>
         </div>
     </div>
 
     <!-- Login Modal -->
-    <div id="loginModal" style="display: none;">
+    <div id="loginModal">
         <div class="modal-content">
-            <h2 style="margin-bottom: 15px;">Secure Login</h2>
+            <h2>Secure Login</h2>
             <p style="font-size: 12px; margin-bottom: 15px; color: var(--warning);">
                 Admin: admin@nexus.com / admin123<br>
-                Captains: team1@nexus.com / cap123 (or team2 / team3)
+                Captains: team1@nexus.com | team2 | team3 / cap123
             </p>
             <input type="email" id="email" placeholder="Email Address">
             <input type="password" id="password" placeholder="Password">
-            <button onclick="processLogin()" style="width: 100%; margin-top: 10px;">Login</button>
+            <button onclick="processLogin()" style="width: 100%;">Login</button>
             <button onclick="hideLogin()" style="width: 100%; margin-top: 10px; background: #64748b;">Cancel</button>
         </div>
     </div>
 
+<!-- Connect to Socket.io -->
+<script src="/socket.io/socket.io.js"></script>
 <script>
-    // --- DATABASE MOCKUP (Using LocalStorage for tab syncing) ---
-    
-    // Valid Users
+    const socket = io();
+
+    // Valid Users Array
     const users = {
         "admin@nexus.com": { password: "admin123", role: "admin", team: "Admin" },
         "team1@nexus.com": { password: "cap123", role: "captain", team: "FC Strikers" },
         "team2@nexus.com": { password: "cap123", role: "captain", team: "United PES" },
         "team3@nexus.com": { password: "cap123", role: "captain", team: "Galacticos" }
     };
-
-    // Initialize Default Players if none exist
-    if (!localStorage.getItem('nexus_players')) {
-        const defaultPlayers =[
-            { id: 1, name: "L. Messi", strength: 105, cardType: "Big Time", value: 100, status: "Available", soldTo: "-" },
-            { id: 2, name: "C. Ronaldo", strength: 103, cardType: "Show Time", value: 90, status: "Available", soldTo: "-" },
-            { id: 3, name: "K. Mbappé", strength: 101, cardType: "Epic", value: 85, status: "Available", soldTo: "-" }
-        ];
-        localStorage.setItem('nexus_players', JSON.stringify(defaultPlayers));
-    }
-
-    // Initialize Auction State if none exist
-    if (!localStorage.getItem('nexus_auction_state')) {
-        const defaultState = { activePlayerId: null, currentBid: 0, highestBidder: null };
-        localStorage.setItem('nexus_auction_state', JSON.stringify(defaultState));
-    }
-
-    // Current Session User
+    
     let currentUser = JSON.parse(sessionStorage.getItem('nexus_user')) || null;
+    let localPlayers =[];
 
-    // --- CORE FUNCTIONS ---
+    // Helper: Format Currency (Converts >100 Lakhs into Crores for display)
+    function formatCurrency(lakhs) {
+        if(lakhs >= 100) return (lakhs / 100).toFixed(2) + " Cr";
+        return lakhs + " L";
+    }
 
-    function getPlayers() { return JSON.parse(localStorage.getItem('nexus_players')); }
-    function setPlayers(data) { localStorage.setItem('nexus_players', JSON.stringify(data)); }
-    function getAuctionState() { return JSON.parse(localStorage.getItem('nexus_auction_state')); }
-    function setAuctionState(data) { localStorage.setItem('nexus_auction_state', JSON.stringify(data)); }
+    // Custom Default values for cards
+    function autoFillBaseValue() {
+        const cardVals = { "Standard": 10, "POTW": 20, "Show Time": 30, "Big Time": 40, "Epic": 50 };
+        const selectedCard = document.getElementById('newPCard').value;
+        document.getElementById('newPValue').value = cardVals[selectedCard] || 10;
+    }
 
-    // RENDER UI
-    function updateUI() {
-        renderTable();
-        renderLiveAuction();
+    // Initialize Page Data via API
+    fetch('/api/data').then(res => res.json()).then(data => {
+        localPlayers = data.players;
+        renderPlayers(data.players);
+        renderTeams(data.teams);
+        renderLiveAuction(data.state);
         checkAuthUI();
-    }
+    });
 
-    function checkAuthUI() {
-        const loginBtn = document.getElementById('loginBtn');
-        const logoutBtn = document.getElementById('logoutBtn');
-        const userInfo = document.getElementById('userInfo');
-        const adminDashboard = document.getElementById('adminDashboard');
-        const adminLiveControls = document.getElementById('adminLiveControls');
-        const captainControls = document.getElementById('captainControls');
-        
-        const adminOnlyCols = document.querySelectorAll('.admin-only');
+    // Socket Listeners (Real-time sync)
+    socket.on('updatePlayers', (players) => { localPlayers = players; renderPlayers(players); });
+    socket.on('updateTeams', (teams) => renderTeams(teams));
+    socket.on('updateAuction', (state) => renderLiveAuction(state));
+    socket.on('errorMsg', (msg) => alert("⚠️ " + msg));
 
-        if (currentUser) {
-            loginBtn.classList.add('hidden');
-            logoutBtn.classList.remove('hidden');
-            userInfo.innerText = `Logged in as: ${currentUser.team} (${currentUser.role})`;
-
-            if (currentUser.role === 'admin') {
-                adminDashboard.classList.remove('hidden');
-                adminLiveControls.classList.remove('hidden');
-                captainControls.classList.add('hidden');
-                adminOnlyCols.forEach(el => el.classList.remove('hidden'));
-            } else if (currentUser.role === 'captain') {
-                adminDashboard.classList.add('hidden');
-                adminLiveControls.classList.add('hidden');
-                captainControls.classList.remove('hidden');
-                adminOnlyCols.forEach(el => el.classList.add('hidden'));
-            }
-        } else {
-            loginBtn.classList.remove('hidden');
-            logoutBtn.classList.add('hidden');
-            userInfo.innerText = "Viewing as Public";
-            adminDashboard.classList.add('hidden');
-            adminLiveControls.classList.add('hidden');
-            captainControls.classList.add('hidden');
-            adminOnlyCols.forEach(el => el.classList.add('hidden'));
-        }
-    }
-
-    function renderTable() {
-        const players = getPlayers();
+    // UI Renderers
+    function renderPlayers(players) {
         const tbody = document.getElementById('playerTableBody');
         tbody.innerHTML = '';
-
         players.forEach(p => {
-            const tr = document.createElement('tr');
-            let adminBtn = p.status === 'Available' ? 
-                `<button onclick="startAuction(${p.id})">Start Auction</button>` : '';
-
-            tr.innerHTML = `
-                <td><strong>${p.name}</strong></td>
-                <td>${p.strength}</td>
-                <td>${p.cardType}</td>
-                <td>${p.value}M</td>
-                <td class="${p.status === 'Available' ? 'status-available' : 'status-sold'}">${p.status}</td>
-                <td>${p.soldTo}</td>
-                <td class="admin-only ${(!currentUser || currentUser.role !== 'admin') ? 'hidden' : ''}">${adminBtn}</td>
+            const adminBtn = p.status === 'Available' ? `<button onclick="startAuction('${p._id}', ${p.value})">Start Auction</button>` : '';
+            tbody.innerHTML += `
+                <tr>
+                    <td><strong>${p.name}</strong></td>
+                    <td>${p.strength}</td>
+                    <td>${p.cardType}</td>
+                    <td>${formatCurrency(p.value)}</td>
+                    <td class="${p.status === 'Available' ? 'status-available' : 'status-sold'}">${p.status}</td>
+                    <td>${p.soldTo}</td>
+                    <td class="admin-only ${(!currentUser || currentUser.role !== 'admin') ? 'hidden' : ''}">${adminBtn}</td>
+                </tr>
             `;
-            tbody.appendChild(tr);
         });
     }
 
-    function renderLiveAuction() {
-        const state = getAuctionState();
-        const players = getPlayers();
-        
-        if (!state.activePlayerId) {
+    function renderTeams(teams) {
+        const tbody = document.getElementById('teamTableBody');
+        tbody.innerHTML = '';
+        teams.forEach(t => {
+            // Highlight team in Red if budget is getting low (<50L)
+            const color = t.budget < 50 ? 'var(--danger)' : 'var(--primary)';
+            tbody.innerHTML += `<tr><td><strong>${t.name}</strong></td><td style="color:${color}; font-weight:bold;">${formatCurrency(t.budget)}</td></tr>`;
+        });
+    }
+
+    function renderLiveAuction(state) {
+        if (!state || !state.activePlayerId) {
             document.getElementById('noAuctionActive').classList.remove('hidden');
             document.getElementById('activeAuction').classList.add('hidden');
             return;
         }
 
-        const player = players.find(p => p.id === state.activePlayerId);
-        if(!player) return;
-
+        const player = state.activePlayerId;
         document.getElementById('noAuctionActive').classList.add('hidden');
         document.getElementById('activeAuction').classList.remove('hidden');
 
         document.getElementById('livePlayerName').innerText = player.name;
         document.getElementById('livePlayerStrength').innerText = player.strength;
         document.getElementById('livePlayerCard').innerText = player.cardType;
-        document.getElementById('liveBidAmount').innerText = state.currentBid + "M";
+        document.getElementById('liveBidAmount').innerText = formatCurrency(state.currentBid);
         document.getElementById('liveBidderName').innerText = state.highestBidder || "None";
     }
 
-    // --- ADMIN ACTIONS ---
+    // Emitters
     function addPlayer() {
-        const name = document.getElementById('newPName').value;
-        const strength = document.getElementById('newPStrength').value;
-        const cardType = document.getElementById('newPCard').value;
-        const value = document.getElementById('newPValue').value;
-
-        if(!name || !strength || !value) return alert("Fill all fields!");
-
-        const players = getPlayers();
-        players.push({
-            id: Date.now(),
-            name, strength, cardType, value: parseInt(value), status: "Available", soldTo: "-"
-        });
-
-        setPlayers(players);
+        const data = {
+            name: document.getElementById('newPName').value,
+            strength: document.getElementById('newPStrength').value,
+            cardType: document.getElementById('newPCard').value,
+            value: document.getElementById('newPValue').value
+        };
+        if(!data.name) return;
+        socket.emit('addPlayer', data);
         document.getElementById('newPName').value = '';
-        document.getElementById('newPStrength').value = '';
-        document.getElementById('newPValue').value = '';
-        updateUI();
     }
 
-    function startAuction(playerId) {
-        const players = getPlayers();
-        const player = players.find(p => p.id === playerId);
-        
-        setAuctionState({
-            activePlayerId: playerId,
-            currentBid: player.value,
-            highestBidder: null
-        });
-        updateUI();
-    }
+    function startAuction(id, baseValue) { socket.emit('startAuction', {playerId: id, baseValue: baseValue}); }
+    function placeBid(increment) { socket.emit('placeBid', { teamName: currentUser.team, increment: increment }); }
+    function sellPlayer() { socket.emit('sellPlayer'); }
+    function cancelAuction() { socket.emit('cancelAuction'); }
 
-    function cancelAuction() {
-        setAuctionState({ activePlayerId: null, currentBid: 0, highestBidder: null });
-        updateUI();
-    }
+    // Authentication UI Logic
+    function checkAuthUI() {
+        if (currentUser) {
+            document.getElementById('loginBtn').classList.add('hidden');
+            document.getElementById('logoutBtn').classList.remove('hidden');
+            document.getElementById('userInfo').innerText = `${currentUser.team} | Role: ${currentUser.role}`;
 
-    function sellPlayer() {
-        const state = getAuctionState();
-        if (!state.activePlayerId || !state.highestBidder) {
-            return alert("Cannot sell! No bids have been placed yet.");
+            if (currentUser.role === 'admin') {
+                document.getElementById('adminDashboard').classList.remove('hidden');
+                document.getElementById('adminLiveControls').classList.remove('hidden');
+                document.getElementById('captainControls').classList.add('hidden');
+                document.querySelectorAll('.admin-only').forEach(el => el.classList.remove('hidden'));
+            } else {
+                document.getElementById('adminDashboard').classList.add('hidden');
+                document.getElementById('adminLiveControls').classList.add('hidden');
+                document.getElementById('captainControls').classList.remove('hidden');
+                document.querySelectorAll('.admin-only').forEach(el => el.classList.add('hidden'));
+            }
+        } else {
+            document.getElementById('loginBtn').classList.remove('hidden');
+            document.getElementById('logoutBtn').classList.add('hidden');
+            document.getElementById('userInfo').innerText = "Public View";
+            document.getElementById('adminDashboard').classList.add('hidden');
+            document.getElementById('adminLiveControls').classList.add('hidden');
+            document.getElementById('captainControls').classList.add('hidden');
+            document.querySelectorAll('.admin-only').forEach(el => el.classList.add('hidden'));
         }
-
-        const players = getPlayers();
-        const playerIndex = players.findIndex(p => p.id === state.activePlayerId);
-        
-        // Update Player Status
-        players[playerIndex].status = "Sold";
-        players[playerIndex].soldTo = `${state.highestBidder} (${state.currentBid}M)`;
-        setPlayers(players);
-
-        // Reset Auction State
-        cancelAuction(); 
     }
 
-    // --- CAPTAIN ACTIONS ---
-    function placeBid(increment) {
-        const state = getAuctionState();
-        if(!state.activePlayerId) return;
-
-        state.currentBid += increment;
-        state.highestBidder = currentUser.team;
-        setAuctionState(state);
-        updateUI();
-    }
-
-    // --- AUTHENTICATION ---
     function showLogin() { document.getElementById('loginModal').style.display = 'flex'; }
     function hideLogin() { document.getElementById('loginModal').style.display = 'none'; }
-
     function processLogin() {
         const email = document.getElementById('email').value;
         const pass = document.getElementById('password').value;
-
         if (users[email] && users[email].password === pass) {
             currentUser = users[email];
             sessionStorage.setItem('nexus_user', JSON.stringify(currentUser));
             hideLogin();
-            updateUI();
-        } else {
-            alert("Invalid Email or Password!");
-        }
+            checkAuthUI();
+            renderPlayers(localPlayers); // Re-render table to show admin buttons
+        } else { alert("Invalid Credentials!"); }
     }
-
     function logout() {
         currentUser = null;
         sessionStorage.removeItem('nexus_user');
-        updateUI();
+        checkAuthUI();
+        renderPlayers(localPlayers); // Hide admin buttons
     }
-
-    // Reset Tool
-    function clearData(){
-        if(confirm("Are you sure? This deletes all players and auctions!")){
-            localStorage.clear();
-            location.reload();
-        }
-    }
-
-    // --- MAGIC SYNC: Syncs automatically across multiple tabs ---
-    window.addEventListener('storage', (e) => {
-        if (e.key === 'nexus_players' || e.key === 'nexus_auction_state') {
-            updateUI();
-        }
-    });
-
-    // Initial Load
-    updateUI();
-    const socket = io();
-
-// Instead of localStorage, listen to the server
-socket.on('updateAuction', (auctionState) => {
-    // Code to update Live Auction HTML based on auctionState from MongoDB
-    updateLiveAuctionUI(auctionState); 
-});
-
-socket.on('updatePlayers', (players) => {
-    // Code to update the Table HTML based on players from MongoDB
-    renderTable(players);
-});
-
-// When a captain clicks bid:
-function placeBid(increment) {
-    socket.emit('placeBid', { teamName: currentUser.team, increment: increment });
-}
-
 </script>
 </body>
 </html>
