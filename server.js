@@ -7,7 +7,7 @@ const cors = require('cors');
 
 const Player = require('./nexus-auction/models/Player');
 const AuctionState = require('./nexus-auction/models/AuctionState');
-const Team = require('./models/Team'); // <--- New Team Model
+const Team = require('./nexus-auction/models/Team'); // <--- New Team Model
 
 const app = express();
 const server = http.createServer(app);
