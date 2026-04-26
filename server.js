@@ -5,8 +5,8 @@ const mongoose = require('mongoose');
 const { Server } = require('socket.io');
 const cors = require('cors');
 
-const Player = require('.nexus-auction/models/Player');
-const AuctionState = require('.nexus-auction/models/AuctionState');
+const Player = require('./nexus-auction/models/Player');
+const AuctionState = require('./nexus-auction/models/AuctionState');
 const Team = require('./models/Team'); // <--- New Team Model
 
 const app = express();
