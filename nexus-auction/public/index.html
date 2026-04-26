@@ -391,6 +391,23 @@
 
     // Initial Load
     updateUI();
+    const socket = io();
+
+// Instead of localStorage, listen to the server
+socket.on('updateAuction', (auctionState) => {
+    // Code to update Live Auction HTML based on auctionState from MongoDB
+    updateLiveAuctionUI(auctionState); 
+});
+
+socket.on('updatePlayers', (players) => {
+    // Code to update the Table HTML based on players from MongoDB
+    renderTable(players);
+});
+
+// When a captain clicks bid:
+function placeBid(increment) {
+    socket.emit('placeBid', { teamName: currentUser.team, increment: increment });
+}
 
 </script>
 </body>
