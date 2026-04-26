@@ -1,1 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexus PES Legends - Auction</title>
+    <style>
+        :root {
+            --primary: #00ff88;
+            --bg-dark: #0f172a;
+            --bg-panel: #1e293b;
+            --text-light: #f8fafc;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: var(--bg-dark); color: var(--text-light); }
+        header { background: #020617; padding: 20px; border-bottom: 2px solid var(--primary); display: flex; justify-content: space-between; align-items: center; }
+        .logo { font-size: 24px; font-weight: bold; color: var(--primary); }
+        
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .text-center { text-align: center; }
+        .mt-2 { margin-top: 20px; }
+        
+        /* Panels */
+        .panel { background: var(--bg-panel); padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        .panel h2 { margin-bottom: 15px; color: var(--primary); border-bottom: 1px solid #334155; padding-bottom: 10px; }
+        
+        /* Buttons & Inputs */
+        button { background: var(--primary); color: #000; border: none; padding: 10px 15px; border-radius: 4px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        button:hover { opacity: 0.8; }
+        button.danger { background: var(--danger); color: white; }
+        input, select { width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 4px; border: 1px solid #334155; background: #0f172a; color: white; }
+        
+        /* Tables */
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #334155; }
+        th { background: #020617; color: var(--primary); }
+        .status-available { color: var(--primary); }
+        .status-sold { color: var(--danger); }
+        
+        /* Live Auction Area */
+        .live-auction { text-align: center; padding: 30px; background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%); border: 2px solid var(--primary); border-radius: 10px;}
+        .player-focus { font-size: 32px; font-weight: bold; margin: 10px 0; color: #fff; }
+        .current-bid { font-size: 48px; color: var(--primary); font-weight: bold; margin: 15px 0; }
+        .highest-bidder { font-size: 20px; color: var(--warning); margin-bottom: 20px; }
+        .bid-controls button { font-size: 18px; margin: 0 5px; }
 
+        /* Login Modal */
+        #loginModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); align-items: center; justify-content: center; z-index: 1000; }
+        .modal-content { background: var(--bg-panel); padding: 30px; border-radius: 8px; width: 350px; }
+        
+        .hidden { display: none !important; }
+        .flex { display: flex; gap: 10px; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo">🎮 Nexus PES Legends</div>
+        <div id="authArea">
+            <span id="userInfo" style="margin-right: 15px;"></span>
+            <button id="loginBtn" onclick="showLogin()">Login</button>
+            <button id="logoutBtn" onclick="logout()" class="hidden danger">Logout</button>
+        </div>
+    </header>
+
+    <div class="container">
+        <h1 class="text-center mt-2" style="margin-bottom: 30px; font-size: 36px;">🏆 Nexus Auction Carnival 2026</h1>
+
+        <!-- LIVE AUCTION DASHBOARD -->
+        <div class="panel live-auction">
+            <h2>🔴 LIVE AUCTION</h2>
+            <div id="noAuctionActive">
+                <p style="font-size: 20px; color: #94a3b8; margin-top: 20px;">Waiting for Admin to start an auction...</p>
+            </div>
+            
+            <div id="activeAuction" class="hidden">
+                <div style="font-size: 18px; color: #94a3b8;">Currently on the block:</div>
+                <div class="player-focus" id="livePlayerName">-</div>
+                <div>Strength: <span id="livePlayerStrength"></span> | Card: <span id="livePlayerCard"></span></div>
+                
+                <div class="current-bid">Current Bid: <span id="liveBidAmount">0</span></div>
+                <div class="highest-bidder">Highest Bidder: <span id="liveBidderName">None</span></div>
+
+                <!-- Captain Bidding Controls -->
+                <div id="captainControls" class="bid-controls hidden mt-2">
+                    <button onclick="placeBid(5)">Bid +5M</button>
+                    <button onclick="placeBid(10)">Bid +10M</button>
+                    <button onclick="placeBid(20)">Bid +20M</button>
+                </div>
+
+                <!-- Admin Live Controls -->
+                <div id="adminLiveControls" class="bid-controls hidden mt-2">
+                    <button class="danger" onclick="sellPlayer()">🔨 Sell to Highest Bidder</button>
+                    <button style="background: #64748b;" onclick="cancelAuction()">Cancel Auction</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ADMIN DASHBOARD (Hidden by default) -->
+        <div id="adminDashboard" class="panel hidden">
+            <h2>⚙️ Admin Control Panel - Add New Player</h2>
+            <div class="flex">
+                <input type="text" id="newPName" placeholder="Player Name" required>
+                <input type="number" id="newPStrength" placeholder="Team Strength" required>
+                <select id="newPCard">
+                    <option value="Standard">Standard</option>
+                    <option value="Epic">Epic</option>
+                    <option value="Big Time">Big Time</option>
+                    <option value="Show Time">Show Time</option>
+                    <option value="POTW">POTW</option>
+                </select>
+                <input type="number" id="newPValue" placeholder="Base Value (M)" required>
+                <button onclick="addPlayer()">Add Player</button>
+            </div>
+        </div>
+
+        <!-- PLAYER LIST TABLE -->
+        <div class="panel">
+            <h2>📋 Available Player List</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Team Strength</th>
+                        <th>Card Type</th>
+                        <th>Base Value</th>
+                        <th>Status</th>
+                        <th>Sold To</th>
+                        <th class="admin-only hidden">Admin Action</th>
+                    </tr>
+                </thead>
+                <input type="button" onclick="clearData()" value="Clear All Data (Hard Reset)" style="background: var(--danger); width: auto; font-size: 12px; margin-bottom: 10px;"/>
+                <tbody id="playerTableBody">
+                    <!-- Populated by JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Login Modal -->
+    <div id="loginModal" style="display: none;">
+        <div class="modal-content">
+            <h2 style="margin-bottom: 15px;">Secure Login</h2>
+            <p style="font-size: 12px; margin-bottom: 15px; color: var(--warning);">
+                Admin: admin@nexus.com / admin123<br>
+                Captains: team1@nexus.com / cap123 (or team2 / team3)
+            </p>
+            <input type="email" id="email" placeholder="Email Address">
+            <input type="password" id="password" placeholder="Password">
+            <button onclick="processLogin()" style="width: 100%; margin-top: 10px;">Login</button>
+            <button onclick="hideLogin()" style="width: 100%; margin-top: 10px; background: #64748b;">Cancel</button>
+        </div>
+    </div>
+
+<script>
+    // --- DATABASE MOCKUP (Using LocalStorage for tab syncing) ---
+    
+    // Valid Users
+    const users = {
+        "admin@nexus.com": { password: "admin123", role: "admin", team: "Admin" },
+        "team1@nexus.com": { password: "cap123", role: "captain", team: "FC Strikers" },
+        "team2@nexus.com": { password: "cap123", role: "captain", team: "United PES" },
+        "team3@nexus.com": { password: "cap123", role: "captain", team: "Galacticos" }
+    };
+
+    // Initialize Default Players if none exist
+    if (!localStorage.getItem('nexus_players')) {
+        const defaultPlayers =[
+            { id: 1, name: "L. Messi", strength: 105, cardType: "Big Time", value: 100, status: "Available", soldTo: "-" },
+            { id: 2, name: "C. Ronaldo", strength: 103, cardType: "Show Time", value: 90, status: "Available", soldTo: "-" },
+            { id: 3, name: "K. Mbappé", strength: 101, cardType: "Epic", value: 85, status: "Available", soldTo: "-" }
+        ];
+        localStorage.setItem('nexus_players', JSON.stringify(defaultPlayers));
+    }
+
+    // Initialize Auction State if none exist
+    if (!localStorage.getItem('nexus_auction_state')) {
+        const defaultState = { activePlayerId: null, currentBid: 0, highestBidder: null };
+        localStorage.setItem('nexus_auction_state', JSON.stringify(defaultState));
+    }
+
+    // Current Session User
+    let currentUser = JSON.parse(sessionStorage.getItem('nexus_user')) || null;
+
+    // --- CORE FUNCTIONS ---
+
+    function getPlayers() { return JSON.parse(localStorage.getItem('nexus_players')); }
+    function setPlayers(data) { localStorage.setItem('nexus_players', JSON.stringify(data)); }
+    function getAuctionState() { return JSON.parse(localStorage.getItem('nexus_auction_state')); }
+    function setAuctionState(data) { localStorage.setItem('nexus_auction_state', JSON.stringify(data)); }
+
+    // RENDER UI
+    function updateUI() {
+        renderTable();
+        renderLiveAuction();
+        checkAuthUI();
+    }
+
+    function checkAuthUI() {
+        const loginBtn = document.getElementById('loginBtn');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const userInfo = document.getElementById('userInfo');
+        const adminDashboard = document.getElementById('adminDashboard');
+        const adminLiveControls = document.getElementById('adminLiveControls');
+        const captainControls = document.getElementById('captainControls');
+        
+        const adminOnlyCols = document.querySelectorAll('.admin-only');
+
+        if (currentUser) {
+            loginBtn.classList.add('hidden');
+            logoutBtn.classList.remove('hidden');
+            userInfo.innerText = `Logged in as: ${currentUser.team} (${currentUser.role})`;
+
+            if (currentUser.role === 'admin') {
+                adminDashboard.classList.remove('hidden');
+                adminLiveControls.classList.remove('hidden');
+                captainControls.classList.add('hidden');
+                adminOnlyCols.forEach(el => el.classList.remove('hidden'));
+            } else if (currentUser.role === 'captain') {
+                adminDashboard.classList.add('hidden');
+                adminLiveControls.classList.add('hidden');
+                captainControls.classList.remove('hidden');
+                adminOnlyCols.forEach(el => el.classList.add('hidden'));
+            }
+        } else {
+            loginBtn.classList.remove('hidden');
+            logoutBtn.classList.add('hidden');
+            userInfo.innerText = "Viewing as Public";
+            adminDashboard.classList.add('hidden');
+            adminLiveControls.classList.add('hidden');
+            captainControls.classList.add('hidden');
+            adminOnlyCols.forEach(el => el.classList.add('hidden'));
+        }
+    }
+
+    function renderTable() {
+        const players = getPlayers();
+        const tbody = document.getElementById('playerTableBody');
+        tbody.innerHTML = '';
+
+        players.forEach(p => {
+            const tr = document.createElement('tr');
+            let adminBtn = p.status === 'Available' ? 
+                `<button onclick="startAuction(${p.id})">Start Auction</button>` : '';
+
+            tr.innerHTML = `
+                <td><strong>${p.name}</strong></td>
+                <td>${p.strength}</td>
+                <td>${p.cardType}</td>
+                <td>${p.value}M</td>
+                <td class="${p.status === 'Available' ? 'status-available' : 'status-sold'}">${p.status}</td>
+                <td>${p.soldTo}</td>
+                <td class="admin-only ${(!currentUser || currentUser.role !== 'admin') ? 'hidden' : ''}">${adminBtn}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function renderLiveAuction() {
+        const state = getAuctionState();
+        const players = getPlayers();
+        
+        if (!state.activePlayerId) {
+            document.getElementById('noAuctionActive').classList.remove('hidden');
+            document.getElementById('activeAuction').classList.add('hidden');
+            return;
+        }
+
+        const player = players.find(p => p.id === state.activePlayerId);
+        if(!player) return;
+
+        document.getElementById('noAuctionActive').classList.add('hidden');
+        document.getElementById('activeAuction').classList.remove('hidden');
+
+        document.getElementById('livePlayerName').innerText = player.name;
+        document.getElementById('livePlayerStrength').innerText = player.strength;
+        document.getElementById('livePlayerCard').innerText = player.cardType;
+        document.getElementById('liveBidAmount').innerText = state.currentBid + "M";
+        document.getElementById('liveBidderName').innerText = state.highestBidder || "None";
+    }
+
+    // --- ADMIN ACTIONS ---
+    function addPlayer() {
+        const name = document.getElementById('newPName').value;
+        const strength = document.getElementById('newPStrength').value;
+        const cardType = document.getElementById('newPCard').value;
+        const value = document.getElementById('newPValue').value;
+
+        if(!name || !strength || !value) return alert("Fill all fields!");
+
+        const players = getPlayers();
+        players.push({
+            id: Date.now(),
+            name, strength, cardType, value: parseInt(value), status: "Available", soldTo: "-"
+        });
+
+        setPlayers(players);
+        document.getElementById('newPName').value = '';
+        document.getElementById('newPStrength').value = '';
+        document.getElementById('newPValue').value = '';
+        updateUI();
+    }
+
+    function startAuction(playerId) {
+        const players = getPlayers();
+        const player = players.find(p => p.id === playerId);
+        
+        setAuctionState({
+            activePlayerId: playerId,
+            currentBid: player.value,
+            highestBidder: null
+        });
+        updateUI();
+    }
+
+    function cancelAuction() {
+        setAuctionState({ activePlayerId: null, currentBid: 0, highestBidder: null });
+        updateUI();
+    }
+
+    function sellPlayer() {
+        const state = getAuctionState();
+        if (!state.activePlayerId || !state.highestBidder) {
+            return alert("Cannot sell! No bids have been placed yet.");
+        }
+
+        const players = getPlayers();
+        const playerIndex = players.findIndex(p => p.id === state.activePlayerId);
+        
+        // Update Player Status
+        players[playerIndex].status = "Sold";
+        players[playerIndex].soldTo = `${state.highestBidder} (${state.currentBid}M)`;
+        setPlayers(players);
+
+        // Reset Auction State
+        cancelAuction(); 
+    }
+
+    // --- CAPTAIN ACTIONS ---
+    function placeBid(increment) {
+        const state = getAuctionState();
+        if(!state.activePlayerId) return;
+
+        state.currentBid += increment;
+        state.highestBidder = currentUser.team;
+        setAuctionState(state);
+        updateUI();
+    }
+
+    // --- AUTHENTICATION ---
+    function showLogin() { document.getElementById('loginModal').style.display = 'flex'; }
+    function hideLogin() { document.getElementById('loginModal').style.display = 'none'; }
+
+    function processLogin() {
+        const email = document.getElementById('email').value;
+        const pass = document.getElementById('password').value;
+
+        if (users[email] && users[email].password === pass) {
+            currentUser = users[email];
+            sessionStorage.setItem('nexus_user', JSON.stringify(currentUser));
+            hideLogin();
+            updateUI();
+        } else {
+            alert("Invalid Email or Password!");
+        }
+    }
+
+    function logout() {
+        currentUser = null;
+        sessionStorage.removeItem('nexus_user');
+        updateUI();
+    }
+
+    // Reset Tool
+    function clearData(){
+        if(confirm("Are you sure? This deletes all players and auctions!")){
+            localStorage.clear();
+            location.reload();
+        }
+    }
+
+    // --- MAGIC SYNC: Syncs automatically across multiple tabs ---
+    window.addEventListener('storage', (e) => {
+        if (e.key === 'nexus_players' || e.key === 'nexus_auction_state') {
+            updateUI();
+        }
+    });
+
+    // Initial Load
+    updateUI();
+
+</script>
+</body>
+</html>
